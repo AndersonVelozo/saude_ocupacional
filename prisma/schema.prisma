@@ -4,9 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // Connection URLs are no longer supported in schema files.
-  // Move the DATABASE_URL to prisma.config.ts and pass an `adapter` (for direct DB)
-  // or `accelerateUrl` (for Accelerate) to the PrismaClient constructor.
+  url      = env("DATABASE_URL")
 }
 
 model Usuario {
@@ -23,4 +21,44 @@ enum Role {
   ADMIN
   RH
   CLINICA
+}
+
+// ---------------- PACIENTE / EXAME / ASO ----------------
+
+model Paciente {
+  id             Int       @id @default(autoincrement())
+  nome           String
+  cpf            String    @unique
+  dataNascimento DateTime?
+  cargo          String?
+  setor          String?
+  empresa        String?
+  ativo          Boolean   @default(true)
+  criadoEm       DateTime  @default(now())
+
+  exames         Exame[]
+  asos           Aso[]
+}
+
+model Exame {
+  id          Int       @id @default(autoincrement())
+  tipo        String
+  data        DateTime
+  resultado   String?
+  anexoUrl    String?
+  pacienteId  Int
+  paciente    Paciente  @relation(fields: [pacienteId], references: [id])
+  criadoEm    DateTime  @default(now())
+}
+
+model Aso {
+  id          Int       @id @default(autoincrement())
+  tipo        String        // Admissional, Periódico, Demissional, etc
+  dataExame   DateTime
+  validade    DateTime
+  situacao    String        // Apto, Inapto
+  observacoes String?
+  pacienteId  Int
+  paciente    Paciente  @relation(fields: [pacienteId], references: [id])
+  criadoEm    DateTime  @default(now())
 }

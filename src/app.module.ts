@@ -3,6 +3,10 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsuarioModule } from './usuario/usuario.module';
+import { PacienteModule } from './paciente/paciente.module';
+import { AsoModule } from './aso/aso.module';
+import { ExameModule } from './exame/exame.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -10,6 +14,10 @@ import { UsuarioModule } from './usuario/usuario.module';
     PrismaModule,
     AuthModule,
     UsuarioModule,
+    PacienteModule,
+    AsoModule,
+    ExameModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}

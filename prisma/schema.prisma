@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Connection URLs are no longer supported in schema files.
+  // Move the DATABASE_URL to prisma.config.ts and pass an `adapter` (for direct DB)
+  // or `accelerateUrl` (for Accelerate) to the PrismaClient constructor.
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  email     String   @unique
+  senha     String
+  role      Role     @default(RH)
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  RH
+  CLINICA
+}

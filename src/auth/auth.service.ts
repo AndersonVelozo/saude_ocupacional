@@ -1,32 +1,34 @@
+// src/auth/auth.service.ts
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { UsuarioService } from '../usuario/usuario.service';
+import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { compare } from 'bcrypt';
+import { UsuarioService } from '../usuario/usuario.service';
 import { LoginDto } from './dto/login.dto';
-import { AuthResponseDto } from './dto/auth-response.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private usuarioService: UsuarioService,
-    private jwtService: JwtService,
+    private readonly usuarioService: UsuarioService,
+    private readonly jwtService: JwtService,
   ) {}
 
-  async login(dto: LoginDto): Promise<AuthResponseDto> {
-    const usuario = await this.usuarioService.buscarPorEmail(dto.email);
+  async login(dto: LoginDto) {
+    const usuario = await this.usuarioService.findByEmail(dto.email);
 
     if (!usuario) {
-      throw new UnauthorizedException('Credenciais inválidas');
+      throw new UnauthorizedException('E-mail ou senha inválidos');
     }
 
-    const senhaConfere = await compare(dto.senha, usuario.senha);
-    if (!senhaConfere) {
-      throw new UnauthorizedException('Credenciais inválidas');
+    const senhaOk = await bcrypt.compare(dto.senha, usuario.senha);
+    if (!senhaOk) {
+      throw new UnauthorizedException('E-mail ou senha inválidos');
     }
 
     const payload = {
       sub: usuario.id,
+      id: usuario.id,
       email: usuario.email,
+      nome: usuario.nome,
       role: usuario.role,
     };
 

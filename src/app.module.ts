@@ -8,6 +8,10 @@ import { AsoModule } from './aso/aso.module';
 import { ExameModule } from './exame/exame.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 
+// IMPORTANTE:
+import { APP_GUARD } from '@nestjs/core';
+import { RolesGuard } from './auth/roles.guard';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -18,6 +22,14 @@ import { DashboardModule } from './dashboard/dashboard.module';
     AsoModule,
     ExameModule,
     DashboardModule,
+  ],
+
+  // REGISTRA O GUARD GLOBALMENTE
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
   ],
 })
 export class AppModule {}

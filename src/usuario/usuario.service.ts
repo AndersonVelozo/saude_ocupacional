@@ -1,102 +1,74 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
-  BadRequestException,
   Injectable,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
+import { AlterarSenhaDto } from './dto/alterar-senha.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { Role } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsuarioService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  // ========= usado no boot do sistema p/ criar admin =========
-  async criarAdminSeNaoExistir() {
-    const email = 'admin@teste.com';
-
-    const existe = await this.prisma.usuario.findUnique({ where: { email } });
-    if (existe) return;
-
-    const senhaHash = await bcrypt.hash('123456', 10);
-
-    await this.prisma.usuario.create({
-      data: {
-        nome: 'Admin Master',
-        email,
-        senha: senhaHash,
-        role: Role.ADMIN,
-        ativo: true,
-      },
-    });
-
-    console.log('Admin padrão criado: admin@teste.com / 123456');
-  }
-
-  // ========= usado pelo AuthService =========
+  // 👉 ADICIONE ESTE MÉTODO:
   async buscarPorEmail(email: string) {
-    return this.prisma.usuario.findUnique({ where: { email } });
+    return this.prisma.usuario.findUnique({
+      where: { email },
+    });
   }
 
-  // ========= CRUD exposto no controller =========
+  // Campos públicos (sem senha)
+  private readonly publicSelect = {
+    id: true,
+    nome: true,
+    email: true,
+    role: true,
+    ativo: true,
+    criadoEm: true,
+  };
 
   async create(dto: CreateUsuarioDto) {
-    const existe = await this.prisma.usuario.findUnique({
+    const emailJaExiste = await this.prisma.usuario.findUnique({
       where: { email: dto.email },
     });
-    if (existe) {
-      throw new BadRequestException('Email já cadastrado');
+
+    if (emailJaExiste) {
+      throw new BadRequestException('E-mail já está em uso');
     }
 
     const senhaHash = await bcrypt.hash(dto.senha, 10);
 
-    return this.prisma.usuario.create({
+    const usuario = await this.prisma.usuario.create({
       data: {
         nome: dto.nome,
         email: dto.email,
         senha: senhaHash,
-        role: (dto.role as Role) ?? Role.RH,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        role: dto.role ?? 'RH',
         ativo: dto.ativo ?? true,
       },
-      select: {
-        id: true,
-        nome: true,
-        email: true,
-        role: true,
-        ativo: true,
-        criadoEm: true,
-      },
+      select: this.publicSelect,
     });
+
+    return usuario;
   }
 
   async findAll() {
     return this.prisma.usuario.findMany({
       orderBy: { id: 'asc' },
-      select: {
-        id: true,
-        nome: true,
-        email: true,
-        role: true,
-        ativo: true,
-        criadoEm: true,
-      },
+      select: this.publicSelect,
     });
   }
 
   async findOne(id: number) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id },
-      select: {
-        id: true,
-        nome: true,
-        email: true,
-        role: true,
-        ativo: true,
-        criadoEm: true,
-      },
+      select: this.publicSelect,
     });
 
     if (!usuario) {
@@ -107,68 +79,87 @@ export class UsuarioService {
   }
 
   async update(id: number, dto: UpdateUsuarioDto) {
-    const usuario = await this.prisma.usuario.findUnique({ where: { id } });
-    if (!usuario) {
+    const existe = await this.prisma.usuario.findUnique({ where: { id } });
+
+    if (!existe) {
       throw new NotFoundException('Usuário não encontrado');
     }
 
-    if (dto.email && dto.email !== usuario.email) {
-      const emailJaUsado = await this.prisma.usuario.findUnique({
+    if (dto.email && dto.email !== existe.email) {
+      const emailJaExiste = await this.prisma.usuario.findUnique({
         where: { email: dto.email },
       });
-      if (emailJaUsado) {
-        throw new BadRequestException('Email já está em uso');
+      if (emailJaExiste) {
+        throw new BadRequestException('E-mail já está em uso');
       }
     }
 
-    return this.prisma.usuario.update({
+    const usuario = await this.prisma.usuario.update({
       where: { id },
       data: {
         nome: dto.nome ?? undefined,
         email: dto.email ?? undefined,
-        role: (dto.role as Role) ?? undefined,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        role: dto.role ?? undefined,
         ativo: dto.ativo ?? undefined,
       },
-      select: {
-        id: true,
-        nome: true,
-        email: true,
-        role: true,
-        ativo: true,
-        criadoEm: true,
-      },
+      select: this.publicSelect,
     });
+
+    return usuario;
   }
 
   async desativar(id: number) {
+    const existe = await this.prisma.usuario.findUnique({ where: { id } });
+
+    if (!existe) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    const usuario = await this.prisma.usuario.update({
+      where: { id },
+      data: { ativo: false },
+      select: this.publicSelect,
+    });
+
+    return usuario;
+  }
+
+  async alterarSenha(id: number, dto: AlterarSenhaDto) {
     const usuario = await this.prisma.usuario.findUnique({ where: { id } });
+
     if (!usuario) {
       throw new NotFoundException('Usuário não encontrado');
     }
 
-    return this.prisma.usuario.update({
+    const senhaConfere = await bcrypt.compare(dto.senhaAtual, usuario.senha);
+
+    if (!senhaConfere) {
+      throw new BadRequestException('Senha atual incorreta');
+    }
+
+    const novaHash = await bcrypt.hash(dto.novaSenha, 10);
+
+    await this.prisma.usuario.update({
       where: { id },
-      data: { ativo: false },
-      select: {
-        id: true,
-        nome: true,
-        email: true,
-        role: true,
-        ativo: true,
-        criadoEm: true,
-      },
+      data: { senha: novaHash },
+    });
+
+    return { message: 'Senha alterada com sucesso' };
+  }
+
+  // Usado pelo AuthService
+  async findByEmail(email: string) {
+    return this.prisma.usuario.findUnique({
+      where: { email },
     });
   }
 
-  async alterarSenha(id: number, dto: ChangePasswordDto) {
+  async alterarSenhaAdmin(id: number, dto: ChangePasswordDto) {
     const usuario = await this.prisma.usuario.findUnique({ where: { id } });
+
     if (!usuario) {
       throw new NotFoundException('Usuário não encontrado');
-    }
-
-    const confere = await bcrypt.compare(dto.senhaAtual, usuario.senha);
-    if (!confere) {
-      throw new BadRequestException('Senha atual incorreta');
     }
 
     const novaHash = await bcrypt.hash(dto.novaSenha, 10);

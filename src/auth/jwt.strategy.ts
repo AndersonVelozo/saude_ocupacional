@@ -1,23 +1,36 @@
-import { Injectable } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+// src/auth/jwt.strategy.ts
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ConfigService } from '@nestjs/config';
 import { UsuarioService } from '../usuario/usuario.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(
-    configService: ConfigService,
-    private usuarioService: UsuarioService,
-  ) {
+  constructor(private readonly usuarioService: UsuarioService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      secretOrKey: configService.get<string>('JWT_SECRET'),
+      ignoreExpiration: false,
+      secretOrKey: process.env.JWT_SECRET, // tem que ser o MESMO do AuthModule
     });
   }
 
-  async validate(payload: { sub: number; email: string }) {
-    const usuario = await this.usuarioService.buscarPorEmail(payload.email);
-    return usuario; // fica disponível em req.user
+  async validate(payload: any) {
+    // payload vem do token gerado no AuthService
+    const usuario = await this.usuarioService.findByEmail(payload.email);
+
+    if (!usuario) {
+      throw new UnauthorizedException('Token inválido');
+    }
+
+    // isso vira o request.user
+    return {
+      id: usuario.id,
+      nome: usuario.nome,
+      email: usuario.email,
+      role: usuario.role,
+    };
   }
 }

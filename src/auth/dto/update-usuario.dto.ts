@@ -1,27 +1,27 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
-  IsBoolean,
   IsEmail,
   IsEnum,
   IsOptional,
   IsString,
+  MinLength,
 } from 'class-validator';
-import { Role } from '../role.enum';
+import { Role } from '../../usuario/role.enum';
 
 export class UpdateUsuarioDto {
-  @IsString()
   @IsOptional()
+  @IsString()
+  @MinLength(3)
   nome?: string;
 
-  @IsEmail()
   @IsOptional()
+  @IsEmail()
   email?: string;
 
-  @IsEnum(Role)
   @IsOptional()
+  @IsEnum(Role)
   role?: Role;
 
-  @IsBoolean()
   @IsOptional()
   ativo?: boolean;
 }

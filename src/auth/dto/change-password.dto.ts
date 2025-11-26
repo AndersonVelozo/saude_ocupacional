@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-// src/usuario/dto/change-password.dto.ts
 import { IsString, MinLength } from 'class-validator';
 
 export class ChangePasswordDto {

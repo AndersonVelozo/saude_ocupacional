@@ -1,16 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
-  IsBoolean,
   IsEmail,
   IsEnum,
   IsOptional,
   IsString,
   MinLength,
 } from 'class-validator';
-import { Role } from '../role.enum';
+import { Role } from '../../usuario/role.enum';
 
 export class CreateUsuarioDto {
   @IsString()
+  @MinLength(3)
   nome: string;
 
   @IsEmail()
@@ -20,11 +20,7 @@ export class CreateUsuarioDto {
   @MinLength(4)
   senha: string;
 
+  @IsOptional()
   @IsEnum(Role)
-  @IsOptional()
-  role?: Role;
-
-  @IsBoolean()
-  @IsOptional()
-  ativo?: boolean;
+  role?: Role; // se não vier, Prisma usa default RH
 }

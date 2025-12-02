@@ -1,5 +1,7 @@
+// src/usuario/role.enum.ts
 export enum Role {
   ADMIN = 'ADMIN',
   RH = 'RH',
-  CLINICA = 'CLINICA',
+  MEDICO = 'MEDICO',
+  COLABORADOR = 'COLABORADOR',
 }

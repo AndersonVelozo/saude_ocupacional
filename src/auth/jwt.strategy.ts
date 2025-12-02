@@ -1,36 +1,48 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 // src/auth/jwt.strategy.ts
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { ConfigService } from '@nestjs/config';
 import { UsuarioService } from '../usuario/usuario.service';
+import { Role } from '../usuario/role.enum';
+
+interface JwtPayload {
+  sub: number;
+  email: string;
+  role: Role | string;
+}
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private readonly usuarioService: UsuarioService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly usuarioService: UsuarioService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET, // tem que ser o MESMO do AuthModule
+      secretOrKey:
+        configService.get<string>('JWT_SECRET') ?? 'dev-secret-mude-isso',
     });
   }
 
-  async validate(payload: any) {
-    // payload vem do token gerado no AuthService
+  async validate(payload: JwtPayload) {
     const usuario = await this.usuarioService.findByEmail(payload.email);
 
-    if (!usuario) {
-      throw new UnauthorizedException('Token inválido');
+    if (!usuario || !usuario.ativo) {
+      throw new UnauthorizedException('Usuário não encontrado ou inativo');
     }
 
-    // isso vira o request.user
     return {
       id: usuario.id,
-      nome: usuario.nome,
       email: usuario.email,
-      role: usuario.role,
+      nome: usuario.nome,
+      role: usuario.role, // ex: 'RH', 'ADMIN'
+      ativo: usuario.ativo,
     };
   }
 }

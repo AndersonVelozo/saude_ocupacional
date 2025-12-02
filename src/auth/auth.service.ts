@@ -26,13 +26,13 @@ export class AuthService {
 
     const payload = {
       sub: usuario.id,
-      id: usuario.id,
       email: usuario.email,
-      nome: usuario.nome,
       role: usuario.role,
     };
 
-    const token = await this.jwtService.signAsync(payload);
+    const token = await this.jwtService.signAsync(payload, {
+      expiresIn: '8h',
+    });
 
     return {
       token,

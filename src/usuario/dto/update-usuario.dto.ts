@@ -6,7 +6,7 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
-import { Role } from '../role.enum';
+import { Role } from '@prisma/client'; // 👈 TROCA AQUI
 
 export class UpdateUsuarioDto {
   @IsString()

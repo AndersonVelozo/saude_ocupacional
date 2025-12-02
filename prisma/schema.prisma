@@ -7,23 +7,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Usuario {
-  id        Int      @id @default(autoincrement())
-  nome      String
-  email     String   @unique
-  senha     String
-  role      Role     @default(RH)
-  ativo     Boolean  @default(true)
-  criadoEm  DateTime @default(now())
-}
+// ================== ENUMS ==================
 
 enum Role {
   ADMIN
   RH
   CLINICA
+  MEDICO
 }
 
-// ---------------- PACIENTE / EXAME / ASO ----------------
+enum TipoExame {
+  ADMISSIONAL
+  PERIODICO
+  DEMISSIONAL
+  RETORNO_TRABALHO
+  MUDANCA_FUNCAO
+}
+
+// ================== USUÁRIO ==================
+
+model Usuario {
+  id          Int      @id @default(autoincrement())
+  nome        String
+  email       String   @unique
+  senha       String
+  role        Role     @default(RH)
+  ativo       Boolean  @default(true)
+  criadoEm    DateTime @default(now())
+  atualizadoEm DateTime @default(now()) @updatedAt
+
+  asos        Aso[]
+}
+
+// ================== PACIENTE CLÍNICO ==================
 
 model Paciente {
   id             Int       @id @default(autoincrement())
@@ -36,29 +52,84 @@ model Paciente {
   ativo          Boolean   @default(true)
   criadoEm       DateTime  @default(now())
 
-  exames         Exame[]
-  asos           Aso[]
+  exames Exame[]
 }
 
 model Exame {
-  id          Int       @id @default(autoincrement())
-  tipo        String
-  data        DateTime
-  resultado   String?
-  anexoUrl    String?
-  pacienteId  Int
-  paciente    Paciente  @relation(fields: [pacienteId], references: [id])
-  criadoEm    DateTime  @default(now())
+  id         Int      @id @default(autoincrement())
+  tipo       String
+  data       DateTime
+  resultado  String?
+  anexoUrl   String?
+  pacienteId Int
+  paciente   Paciente @relation(fields: [pacienteId], references: [id])
+  criadoEm   DateTime @default(now())
+}
+
+// ================== EMPRESA / COLABORADOR ==================
+
+model Empresa {
+  id             Int      @id @default(autoincrement())
+  razaoSocial    String
+  nomeFantasia   String?
+  cnpj           String   @unique
+  cnae           String?
+  grauRisco      String?
+  ativo          Boolean  @default(true)
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+
+  colaboradores Colaborador[]
+}
+
+model Colaborador {
+  id             Int      @id @default(autoincrement())
+  nome           String
+  cpf            String   @unique
+  dataNascimento DateTime
+  funcao         String
+  setor          String?
+  dataAdmissao   DateTime
+  ativo          Boolean  @default(true)
+
+  empresaId Int
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  exames ExameOcupacional[]
+}
+
+// ================== EXAME OCUPACIONAL / ASO ==================
+
+model ExameOcupacional {
+  id         Int       @id @default(autoincrement())
+  tipo       TipoExame
+  data       DateTime
+  observacao String?
+  ativo      Boolean   @default(true)
+
+  colaboradorId Int
+  colaborador   Colaborador @relation(fields: [colaboradorId], references: [id])
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  // relação 1-1 com ASO ocupacional
+  aso Aso?
 }
 
 model Aso {
-  id          Int       @id @default(autoincrement())
-  tipo        String        // Admissional, Periódico, Demissional, etc
-  dataExame   DateTime
-  validade    DateTime
-  situacao    String        // Apto, Inapto
-  observacoes String?
-  pacienteId  Int
-  paciente    Paciente  @relation(fields: [pacienteId], references: [id])
-  criadoEm    DateTime  @default(now())
+  id           Int      @id @default(autoincrement())
+  apto         Boolean
+  parecer      String? // Observações do médico
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  exameId Int              @unique
+  exame   ExameOcupacional @relation(fields: [exameId], references: [id])
+
+  medicoId Int
+  medico   Usuario @relation(fields: [medicoId], references: [id])
 }
